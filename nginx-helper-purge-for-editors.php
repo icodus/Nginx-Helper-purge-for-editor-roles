@@ -2,46 +2,46 @@ add_action( 'admin_init' , 'refresh_admin_after_purge' , 9999 );
 
 function refresh_admin_after_purge() {
 
-		global $wp;
-		$custom = false;
+	global $wp;
+	$custom = false;
 
-		$method = filter_input( INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_STRING );
+	$method = filter_input( INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_STRING );
+
+	if ( 'POST' === $method ) {
+		$action = filter_input( INPUT_POST, 'nginx_helper_action', FILTER_SANITIZE_STRING );
+	} else {
+		$action = filter_input( INPUT_GET, 'nginx_helper_action', FILTER_SANITIZE_STRING );
+	}
+
+	if( $action == null ) {
 
 		if ( 'POST' === $method ) {
-			$action = filter_input( INPUT_POST, 'nginx_helper_action', FILTER_SANITIZE_STRING );
+			$action = filter_input( INPUT_POST, 'nginx_custom_action', FILTER_SANITIZE_STRING );
 		} else {
-			$action = filter_input( INPUT_GET, 'nginx_helper_action', FILTER_SANITIZE_STRING );
+			$action = filter_input( INPUT_GET, 'nginx_custom_action', FILTER_SANITIZE_STRING );
 		}
 
-		if( $action == null ) {
+		$custom = true;
+	}
 
-			if ( 'POST' === $method ) {
-				$action = filter_input( INPUT_POST, 'nginx_custom_action', FILTER_SANITIZE_STRING );
-			} else {
-				$action = filter_input( INPUT_GET, 'nginx_custom_action', FILTER_SANITIZE_STRING );
-			}
+	if ( empty( $action ) ) {
+		return;
+	}
 
-			$custom = true;
-		}
+	if ( 'done' === $action && is_admin() ) {
 
-		if ( empty( $action ) ) {
+		if( $custom ) {
+
+			add_action( 'admin_notices', 'purge_display_notices' );
+			add_action( 'network_admin_notices', 'purge_display_notices' );
 			return;
 		}
 
-		if ( 'done' === $action && is_admin() ) {
-
-			if( $custom ) {
-
-				add_action( 'admin_notices', 'purge_display_notices' );
-				add_action( 'network_admin_notices', 'purge_display_notices' );
-				return;
-			}
-
-			$req= remove_query_arg( array_keys( $_GET ), $wp->request );
-			$redirect_url = add_query_arg( 'nginx_custom_action', 'done', $req );
-			wp_redirect( esc_url_raw( $redirect_url ) );
-			exit;
-		}
+		$req= remove_query_arg( array_keys( $_GET ), $wp->request );
+		$redirect_url = add_query_arg( 'nginx_custom_action', 'done', $req );
+		wp_redirect( esc_url_raw( $redirect_url ) );
+		exit;
+	}
 }
 
 add_filter( 'user_has_cap', 'let_editors_purge', 9999, 3 );
@@ -62,12 +62,13 @@ function let_editors_purge( $allcaps, $caps, $args ){
 	return $allcaps;
 }
 
-	function purge_display_notices() {
-		echo '<div class="updated"><p>' . esc_html__( 'Purge initiated', 'nginx-helper' ) . '</p></div>';
-	}
+function purge_display_notices() {
+	echo '<div class="updated"><p>' . esc_html__( 'Purge initiated', 'nginx-helper' ) . '</p></div>';
+}
 
 add_action( 'admin_bar_menu', 'admin_bar_add_nginx_helper_purge_button_for_editors', 80 );
 function admin_bar_add_nginx_helper_purge_button_for_editors() {
+
 		global $wp_admin_bar;
 
 		// https://wordpress.org/plugins/nginx-helper/
@@ -117,4 +118,4 @@ function admin_bar_add_nginx_helper_purge_button_for_editors() {
 
 		$wp_admin_bar->add_menu( $args );
 
-	}
+}
