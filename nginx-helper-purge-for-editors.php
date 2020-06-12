@@ -1,3 +1,4 @@
+<?php
 add_action( 'admin_init' , 'refresh_admin_after_purge' , 9999 );
 
 function refresh_admin_after_purge() {
